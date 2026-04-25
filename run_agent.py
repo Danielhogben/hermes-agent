@@ -889,7 +889,7 @@ class AIAgent:
         fallback_model: Dict[str, Any] = None,
         credential_pool=None,
         checkpoints_enabled: bool = False,
-        checkpoint_max_snapshots: int = 50,
+        checkpoint_max_snapshots: int = 10,
         pass_session_id: bool = False,
         persist_session: bool = True,
     ):
@@ -938,6 +938,12 @@ class AIAgent:
         _install_safe_stdio()
 
         self.model = model
+        # Auto-reduce iterations for local endpoints to save RAM/CPU
+        _is_local = is_local_endpoint(base_url or "")
+        if max_iterations >= 90 and _is_local:
+            max_iterations = 30
+            if not quiet_mode:
+                print(f"[Hermes] Local endpoint detected — reducing max_iterations to {max_iterations}")
         self.max_iterations = max_iterations
         # Shared iteration budget — parent creates, children inherit.
         # Consumed by every LLM turn across parent + all subagents.
@@ -4604,6 +4610,46 @@ class AIAgent:
             )
         return messages
 
+    # Providers known to accept ``reasoning_content`` / ``reasoning_details``
+    # in assistant messages.  Everyone else gets the fields stripped to avoid
+    # 400-level schema-validation errors (e.g. Groq, Cohere, Anthropic, …).
+    _REASONING_CONTENT_SUPPORTED_PROVIDERS: frozenset[str] = frozenset({
+        "deepseek",
+        "kimi-coding",
+        "kimi-coding-cn",
+        "moonshot",
+        "openrouter",
+        "nous",
+        "qwen-oauth",
+        "alibaba",
+        "custom",
+    })
+
+    def _provider_supports_reasoning_content(self) -> bool:
+        """Return True when the active provider accepts reasoning_content."""
+        try:
+            from hermes_cli.models import normalize_provider
+            normalized = normalize_provider(self.provider)
+        except Exception:
+            normalized = self.provider
+        return normalized in self._REASONING_CONTENT_SUPPORTED_PROVIDERS
+
+    def _strip_unsupported_reasoning_fields(
+        self, api_messages: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """Remove reasoning_content / reasoning_details for strict providers.
+
+        Groq, Cohere, Anthropic, Gemini, Mistral, and most other providers
+        reject unknown top-level keys in chat-completions messages with 400
+        or 422.  DeepSeek, Moonshot/Kimi, and a few others expect the field.
+        """
+        if self._provider_supports_reasoning_content():
+            return api_messages
+        for msg in api_messages:
+            msg.pop("reasoning_content", None)
+            msg.pop("reasoning_details", None)
+        return api_messages
+
     @staticmethod
     def _cap_delegate_task_calls(tool_calls: list) -> list:
         """Truncate excess delegate_task calls to max_concurrent_children.
@@ -7961,6 +8007,9 @@ class AIAgent:
                     self._sanitize_tool_calls_for_strict_api(api_msg)
                 api_messages.append(api_msg)
 
+            # Strip reasoning_content for providers that don't support it
+            api_messages = self._strip_unsupported_reasoning_fields(api_messages)
+
             if self._cached_system_prompt:
                 api_messages = [{"role": "system", "content": self._cached_system_prompt}] + api_messages
 
@@ -9138,6 +9187,9 @@ class AIAgent:
                     self._sanitize_tool_calls_for_strict_api(api_msg)
                 api_messages.append(api_msg)
 
+            # Strip reasoning_content for providers that don't support it
+            api_messages = self._strip_unsupported_reasoning_fields(api_messages)
+
             effective_system = self._cached_system_prompt or ""
             if self.ephemeral_system_prompt:
                 effective_system = (effective_system + "\n\n" + self.ephemeral_system_prompt).strip()
@@ -9860,6 +9912,9 @@ class AIAgent:
             # gated on context_compressor — so orphans from session loading or
             # manual message manipulation are always caught.
             api_messages = self._sanitize_api_messages(api_messages)
+
+            # Strip reasoning_content for providers that don't support it
+            api_messages = self._strip_unsupported_reasoning_fields(api_messages)
 
             # Normalize message whitespace and tool-call JSON for consistent
             # prefix matching.  Ensures bit-perfect prefixes across turns,

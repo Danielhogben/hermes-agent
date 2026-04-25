@@ -1,0 +1,62 @@
+# Hermes Pi Config — Lightweight setup for Raspberry Pi / edge nodes
+# Place at ~/.hermes/config.yaml on the Pi
+
+model:
+  default: qwen2.5:0.5b
+  provider: custom
+  base_url: http://127.0.0.1:11434/v1
+  api_key: dummy
+  ollama_num_ctx: 1024
+
+providers: {}
+fallback_providers: []
+
+toolsets:
+- hermes-cli
+
+agent:
+  max_turns: 15
+  gateway_timeout: 300
+  restart_drain_timeout: 10
+  service_tier: ''
+  tool_use_enforcement: auto
+  gateway_timeout_warning: 120
+  gateway_notify_interval: 300
+  reasoning_effort: low
+  verbose: false
+
+terminal:
+  backend: local
+  modal_mode: auto
+  cwd: .
+  timeout: 60
+  env_passthrough: []
+  shell_init_files: []
+  auto_source_bashrc: true
+  container_cpu: 1
+  container_memory: 256
+  container_disk: 2048
+  container_persistent: false
+  docker_image: ''
+  docker_forward_env: []
+  docker_env: {}
+  persistent_shell: false
+  lifetime_seconds: 60
+
+browser:
+  inactivity_timeout: 30
+  command_timeout: 15
+  record_sessions: false
+  allow_private_urls: false
+  cdp_url: ''
+
+checkpoints:
+  enabled: false
+  max_snapshots: 5
+
+file_read_max_chars: 5000
+
+logging:
+  level: WARNING
+  max_size_mb: 2
+  backup_count: 2

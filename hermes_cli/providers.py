@@ -167,6 +167,16 @@ HERMES_OVERLAYS: Dict[str, HermesOverlay] = {
         transport="openai_chat",
         base_url_env_var="OLLAMA_BASE_URL",
     ),
+    "groq": HermesOverlay(
+        transport="openai_chat",
+        base_url_override="https://api.groq.com/openai/v1",
+        base_url_env_var="GROQ_BASE_URL",
+    ),
+    "cohere": HermesOverlay(
+        transport="openai_chat",
+        base_url_override="https://api.cohere.com/compatibility/v1",
+        base_url_env_var="COHERE_BASE_URL",
+    ),
 }
 
 
@@ -280,6 +290,12 @@ ALIASES: Dict[str, str] = {
     # xiaomi
     "mimo": "xiaomi",
     "xiaomi-mimo": "xiaomi",
+
+    # groq
+    "groq-cloud": "groq",
+
+    # cohere
+    "command": "cohere",
 
     # bedrock
     "aws": "bedrock",

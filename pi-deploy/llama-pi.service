@@ -1,0 +1,12 @@
+[Unit]
+Description=llama.cpp server for Pi
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=%h/llama.cpp-bin/llama-b8925/llama-server -m %h/llama-models/qwen2.5-0.5b.gguf --port 11434 -np 2 --ctx-size 1024
+Restart=on-failure
+Environment=HOME=%h
+
+[Install]
+WantedBy=default.target

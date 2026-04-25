@@ -1,0 +1,13 @@
+[Unit]
+Description=Hermes Agent — Pi edge node
+After=network.target llama-pi.service
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/hermes gateway
+Restart=on-failure
+Environment=HOME=%h
+Environment=HERMES_HOME=%h/.hermes
+
+[Install]
+WantedBy=default.target

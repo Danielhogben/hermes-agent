@@ -166,6 +166,12 @@ class SessionDB:
 
         self._init_schema()
 
+        # Auto-prune old sessions on startup to keep DB small
+        try:
+            self.prune_sessions(older_than_days=30)
+        except Exception:
+            pass
+
     # ── Core write helper ──
 
     def _execute_write(self, fn: Callable[[sqlite3.Connection], T]) -> T:
